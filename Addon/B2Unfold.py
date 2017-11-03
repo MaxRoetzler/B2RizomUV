@@ -41,7 +41,7 @@ def B2Unfold_LinkFunction():
     U3dIslandGroups({Mode='DistributeInTilesByBBox', MergingPolicy=8322})\n\
     U3dIslandGroups({Mode='DistributeInTilesEvenly', MergingPolicy=8322, UseTileLocks=true, UseIslandLocks=true})\n\
     U3dPack({ProcessTileSelection=false, RecursionDepth=1, RootGroup='RootGroup', Scaling={Mode=0}, Rotate={Mode=0}, Translate=true, LayoutScalingMode=2})\n\
-    U3dSave({File={Path='C:/develop/NoReturner/UnwrapObjTmp.obj', UVWProps=true}, __UpdateUIObjFileName=true})\n\
+    U3dSave({File={Path='" + path + objName + "', UVWProps=true}, __UpdateUIObjFileName=true})\n\
     U3dQuit()" 
 
 
@@ -60,14 +60,12 @@ def B2Unfold_LinkFunction():
 
     obj_object.select = True
     originalObj.select = True
-
     bpy.context.scene.objects.active = obj_object
-
-    #bpy.ops.object.join_uvs()
+    bpy.ops.object.join_uvs()
 
     originalObj.select = False
-
-    #bpy.ops.object.delete()
+    
+    bpy.ops.object.delete()
 
 # ---------------------------------------- HELPER FUNCTIONS -----------------------------------------
 
