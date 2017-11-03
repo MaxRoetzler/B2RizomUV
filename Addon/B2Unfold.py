@@ -17,7 +17,8 @@ import bpy
 import sys
 
 def B2Unfold_LinkFunction():
-    path = "C:\\develop\\Tools\\BlenderTools\\Unfold3DBridge\\B2Unfold\\trunk\\Addon\\"
+    path = "" + bpy.app.tempdir
+    path = '/'.join(path.split('\\'))
     objName = "Tmp.obj"
     originalObj = bpy.data.objects.get(bpy.context.active_object.name)
 
@@ -26,7 +27,8 @@ def B2Unfold_LinkFunction():
 
     bpy.ops.export_scene.obj(filepath=path + objName, check_existing=True, axis_forward='-Z', axis_up='Y', filter_glob="*.obj;*.mtl", use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False, use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False, use_triangles=False, use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False, group_by_material=False, keep_vertex_order=False, global_scale=1, path_mode='AUTO')
 
-    cmdModel_string = "U3dLoad({File={Path='C:/develop/NoReturner/UnwrapObjTmp.obj', ImportGroups=true, XYZ=true}, NormalizeUVW=true})"
+    cmdModel_string = "U3dLoad({File={Path='" + path + objName + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})"
+    print(cmdModel_string)
 
     cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
     U3dSelect({PrimType='Edge', Select=true, All=true, FilterIslandVisible=true})\n\
@@ -47,9 +49,10 @@ def B2Unfold_LinkFunction():
     f.write(cmdModel_string + cmd1_string)
     f.close()
 
-    subprocess.run(['C:\\Program Files\\Rizom Lab\\Unfold3D\\unfold3d.exe', '-cfi', 'C:\\develop\\NoReturner\\Unwrap.lua'])
+    unfold3DPath = bpy.context.scene.B2Unfold_Settings.unfold3DPath
+    subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
 
-    imported_object = bpy.ops.import_scene.obj(filepath='C:/develop/NoReturner/' + objName)
+    imported_object = bpy.ops.import_scene.obj(filepath=path + objName)
     obj_object = bpy.context.selected_objects[0]
 
     for obj in bpy.context.selected_objects:
@@ -60,11 +63,36 @@ def B2Unfold_LinkFunction():
 
     bpy.context.scene.objects.active = obj_object
 
-    bpy.ops.object.join_uvs()
+    #bpy.ops.object.join_uvs()
 
     originalObj.select = False
 
-    bpy.ops.object.delete()
+    #bpy.ops.object.delete()
+
+# ---------------------------------------- HELPER FUNCTIONS -----------------------------------------
+
+def set_unfold3DPath(self,value):
+    print(value)
+    print(bpy.path.abspath(value))
+    self["unfold3DPath"] = bpy.path.abspath(value) 
+def get_unfold3DPath(self):
+    try:
+        return self['unfold3DPath']
+    except:
+        return ""
+
+# ---------------------------------------- CLASS SETTINGS -------------------------------------------
+
+class B2Unfold_Settings(bpy.types.PropertyGroup):
+    unfold3DPath = bpy.props.StringProperty \
+    (
+        name = "",
+        description = "Set the path to the Unfold3D.exe file",
+        default="",
+        subtype="DIR_PATH",
+        get=get_unfold3DPath,
+        set=set_unfold3DPath
+    )
 
 
 # ---------------------------------------- USER INTEFACE --------------------------------------------
@@ -94,8 +122,18 @@ class UnfoldUV(bpy.types.Panel):
         sendButton.scale_y = 2.5
         sendButton.operator(B2Unfold.bl_idname, text="Send To Unfold3D!", icon='TEXTURE_DATA')
 
+        box = layout.box()
+        box.label("General Options",icon = "FILTER")
+        exeTitle = box.column(True)
+        exeTitle.label("Unfold3D Executable Path")
+        exePath = box.column(True)
+        exePath.prop(bpy.context.scene.B2Unfold_Settings, 'unfold3DPath')
+
 def register():
     bpy.utils.register_module(__name__)
+    
+    # Pointer Properties
+    bpy.types.Scene.B2Unfold_Settings = bpy.props.PointerProperty(type=B2Unfold_Settings)
 
 def unregister():
     bpy.utils.unregister_module(__name__)
