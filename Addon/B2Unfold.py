@@ -1,7 +1,7 @@
 bl_info = {
     "name": "B2Unfold3D",
-    "author": "Erik Sutton / Fantastic, Yes",
-    "version": (0,1),
+    "author": "Art Team at Fantastic, Yes",
+    "version": (0,2),
     "blender": (2, 78, 0),
     "location": "UV > B2Unfold3D - UV Unwrapper ",
     "description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -17,13 +17,17 @@ import bpy
 import sys
 
 def B2Unfold_LinkFunction():
+    
     path = "" + bpy.app.tempdir
     path = '/'.join(path.split('\\'))
     objName = "Tmp.obj"
     originalObj = bpy.data.objects.get(bpy.context.active_object.name)
 
+    # ---------------------------------------- Setup Scene Object ---------------------------------------
     if not bpy.context.object.data.uv_layers:
         bpy.ops.mesh.uv_texture_add()
+
+    # ---------------------------------------------------------------------------------------------------
 
     bpy.ops.export_scene.obj(filepath=path + objName, check_existing=True, axis_forward='-Z', axis_up='Y', filter_glob="*.obj;*.mtl", use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False, use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False, use_triangles=False, use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False, group_by_material=False, keep_vertex_order=False, global_scale=1, path_mode='AUTO')
 
