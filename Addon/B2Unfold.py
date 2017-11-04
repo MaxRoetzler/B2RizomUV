@@ -13,8 +13,7 @@ bl_info = {
 
 import subprocess
 import os
-import bpy  
-import fnmatch
+import bpy 
 import sys
 from sys import platform
 
