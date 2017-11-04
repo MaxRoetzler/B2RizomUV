@@ -14,7 +14,11 @@ bl_info = {
 import subprocess
 import os
 import bpy  
+import fnmatch
 import sys
+from sys import platform
+
+print(platform)
 
 def B2Unfold_LinkFunction():
     
@@ -54,8 +58,15 @@ def B2Unfold_LinkFunction():
     f.close()
 
     unfold3DPath = bpy.context.scene.B2Unfold_Settings.unfold3DPath
-    subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
-
+    
+    if platform == "darwin":
+        l=os.listdir(unfold3DPath)
+        appName = (str(l).strip("[]")).strip("'")
+        subprocess.run([unfold3DPath + appName, '-cfi', path + 'Unwrap.lua'])
+    elif platform == "win32":
+        subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
+            
+            
     imported_object = bpy.ops.import_scene.obj(filepath=path + objName)
     obj_object = bpy.context.selected_objects[0]
 
