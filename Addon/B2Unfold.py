@@ -15,13 +15,14 @@ import subprocess
 import os
 import bpy 
 import sys
+import tempfile
 from sys import platform
 
 print(platform)
 
 def B2Unfold_LinkFunction():
     
-    path = "" + bpy.app.tempdir
+    path = "" + tempfile.gettempdir()
     path = '/'.join(path.split('\\'))
     objName = "Tmp.obj"
     originalObj = bpy.data.objects.get(bpy.context.active_object.name)
@@ -44,7 +45,6 @@ def B2Unfold_LinkFunction():
     U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=250, PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true, BorderIntersections=true, TriangleFlips=true})\n\
     U3dIslandGroups({Mode='DistributeInTilesEvenly', MergingPolicy=8322, GroupPath='RootGroup'})\n\
     U3dPack({ProcessTileSelection=false, RecursionDepth=1, RootGroup='RootGroup', Scaling={}, Rotate={}, Translate=true, LayoutScalingMode=2})\n\
-    U3dOptimize({PrimType='Edge', Iterations=500, Mix=1, AngleDistanceMix=1, RoomSpace=0, MinAngle=1e-005, BorderIntersection=true, TriangleFlips=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, PinMapName='Pin'})\n\
     U3dIslandGroups({Mode='DistributeInTilesByBBox', MergingPolicy=8322})\n\
     U3dIslandGroups({Mode='DistributeInTilesEvenly', MergingPolicy=8322, UseTileLocks=true, UseIslandLocks=true})\n\
     U3dPack({ProcessTileSelection=false, RecursionDepth=1, RootGroup='RootGroup', Scaling={Mode=0}, Rotate={Mode=0}, Translate=true, LayoutScalingMode=2})\n\
@@ -93,17 +93,25 @@ def get_unfold3DPath(self):
     except:
         return ""
 
-# ---------------------------------------- CLASS SETTINGS -------------------------------------------
+# ------------------------------------------- SETTINGS -----------------------------------------------
 
 class B2Unfold_Settings(bpy.types.PropertyGroup):
     unfold3DPath = bpy.props.StringProperty \
     (
         name = "",
         description = "Set the path to the Unfold3D.exe file",
-        default="",
-        subtype="DIR_PATH",
-        get=get_unfold3DPath,
-        set=set_unfold3DPath
+        default = "",
+        subtype = "DIR_PATH",
+        get = get_unfold3DPath,
+        set = set_unfold3DPath
+    )
+    Optimize = bpy.props.IntProperty \
+    (
+        name = "Interations",
+        description = "Optimize UV Coordinate for less distortion (Number of iterations for the optimize algorithm)",
+        default = 1,
+        min = 1,
+        max = 750,
     )
 
 
@@ -118,11 +126,11 @@ class B2Unfold(bpy.types.Operator):
         B2Unfold_LinkFunction()
         return {'FINISHED'}
 
-class UnfoldUV(bpy.types.Panel):
-    """Creates a Panel in the Object properties window"""
-    bl_label = "Unfold3D Unwrap"
+class UnfoldUVMain(bpy.types.Panel):
+    """Creates Main Panel in the Object properties window"""
+    bl_label = "Unfold3D Main"
     bl_context = "objectmode"
-    bl_idname = "Unfold_BasePanel"
+    bl_idname = "Unfold_Panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'TOOLS'
     bl_category = "UnfoldUV"
@@ -135,11 +143,16 @@ class UnfoldUV(bpy.types.Panel):
         sendButton.operator(B2Unfold.bl_idname, text="Send To Unfold3D!", icon='TEXTURE_DATA')
 
         box = layout.box()
-        box.label("General Options",icon = "FILTER")
-        exeTitle = box.column(True)
-        exeTitle.label("Unfold3D Executable Path")
+        box.label("Unfold3D Executable Path",icon = "FILTER")
         exePath = box.column(True)
         exePath.prop(bpy.context.scene.B2Unfold_Settings, 'unfold3DPath')
+        
+        settingsBox = layout.box()
+        settingsBox.label("Unfold3D Unwrapping Settings")
+        
+        iterations = settingsBox.column(True)
+        iterations.label("Optimize")
+        iterations.prop(bpy.context.scene.B2Unfold_Settings, "Optimize")
 
 def register():
     bpy.utils.register_module(__name__)
