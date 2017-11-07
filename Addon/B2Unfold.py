@@ -18,8 +18,6 @@ import sys
 import tempfile
 from sys import platform
 
-print(str(bpy.context.scene.B2Unfold_Settings.sharpestAngle))
-
 def B2Unfold_LinkFunction():
     
     if platform == "darwin":
@@ -94,15 +92,6 @@ def get_unfold3DPath(self):
     except:
         return ""
 
-def jangle(self, context):
-    print("update called on scene ", self.name)
-    # do something based on the value of "my_prop"
-    if self.my_prop:
-        print("It's on")
-    else:
-        print("It's off")
-    return None
-
 def set_algorithm(self, context):
     global algorithmCMDStrings
     global algorithmString
@@ -110,7 +99,6 @@ def set_algorithm(self, context):
     print(algorithmString)
 
 def set_mosaicForce(value):
-    
     bpy.context.scene.B2Unfold_Settings.mosaicForce = value
 
 # ------------------------------------------- SETTINGS -----------------------------------------------
@@ -152,8 +140,7 @@ class B2Unfold_Settings(bpy.types.PropertyGroup):
         description = "Edges that have their polygon's normals forming an angle superior to this value will be selected",
         default = 60,
         min = 1,
-        max = 89,
-        update = jangle
+        max = 89
     )
 
     mosaicForce = bpy.props.FloatProperty \
@@ -162,8 +149,7 @@ class B2Unfold_Settings(bpy.types.PropertyGroup):
         description = "High values will segment more so the islands will be unfolded with less distortion. Low values will segment less but the cut will generate more distortion",
         default = 0.5,
         min = 0.001,
-        max = 0.999,
-        update = jangle
+        max = 0.999
     )
 
 algorithmCMDStrings = \
