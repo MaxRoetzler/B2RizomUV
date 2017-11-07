@@ -1,7 +1,7 @@
 bl_info = {
     "name": "B2Unfold3D",
     "author": "Art Team at Fantastic, Yes",
-    "version": (0,31),
+    "version": (0,32),
     "blender": (2, 78, 0),
     "location": "UV > B2Unfold3D - UV Unwrapper ",
     "description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -54,7 +54,7 @@ def B2Unfold_LinkFunction():
     f.write(cmdModel_string + cmd1_string)
     f.close()
 
-    unfold3DPath = bpy.context.scene.B2Unfold_Settings.unfold3DPath
+    unfold3DPath = bpy.context.scene.unfold3DPath
     
     if platform == "darwin":
         l=os.listdir(unfold3DPath)
@@ -145,8 +145,9 @@ def B2Unfold_Settings(scn):
     (
         name = "Sharpest Angle",
         description = "Edges that have their polygon's normals forming an angle superior to this value will be selected",
+        default = 60,
         min = 1,
-        max = 89,
+        max = 180,
         update = set_algorithm
     )
 
@@ -154,13 +155,12 @@ def B2Unfold_Settings(scn):
     (
         name = "Mosaic Force",
         description = "High values will segment more so the islands will be unfolded with less distortion. Low values will segment less but the cut will generate more distortion",
+        default = 0.5,
         min = 0.001,
         max = 0.999,
         update = set_algorithm
     )
-
 B2Unfold_Settings(bpy.context.scene)
-
 # ---------------------------------------- USER INTEFACE --------------------------------------------
 
 class B2Unfold(bpy.types.Operator):
