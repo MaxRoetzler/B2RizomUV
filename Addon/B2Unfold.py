@@ -1,7 +1,7 @@
 bl_info = {
 	"name": "B2Unfold3D",
 	"author": "Art Team at Fantastic, Yes",
-	"version": (0, 33),
+	"version": (0, 75),
 	"blender": (2, 78, 0),
 	"location": "UV > B2Unfold3D - UV Unwrapper ",
 	"description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -45,7 +45,7 @@ def B2Unfold_LinkFunction():
 	cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
     " + algorithmString + "\n\
     U3dCut({PrimType='Edge'})\n\
-    U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=250, PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true, BorderIntersections=true, TriangleFlips=true})\n\
+    U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true, BorderIntersections=true, TriangleFlips=true})\n\
     U3dIslandGroups({Mode='DistributeInTilesEvenly', MergingPolicy=8322, GroupPath='RootGroup'})\n\
     U3dPack({ProcessTileSelection=false, RecursionDepth=1, RootGroup='RootGroup', Scaling={}, Rotate={}, Translate=true, LayoutScalingMode=2})\n\
     U3dIslandGroups({Mode='DistributeInTilesByBBox', MergingPolicy=8322})\n\
