@@ -1,7 +1,7 @@
 bl_info = {
     "name": "B2Unfold3D",
     "author": "Art Team at Fantastic, Yes",
-    "version": (0,32),
+    "version": (0,33),
     "blender": (2, 78, 0),
     "location": "UV > B2Unfold3D - UV Unwrapper ",
     "description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -110,7 +110,7 @@ def set_mosaicForce(value):
 
 # ------------------------------------------- SETTINGS -----------------------------------------------
 
-def B2Unfold_Settings(scn):
+def B2Unfold_Settings():
     bpy.types.Scene.unfold3DPath = StringProperty \
     (
         name = "",
@@ -147,7 +147,7 @@ def B2Unfold_Settings(scn):
         description = "Edges that have their polygon's normals forming an angle superior to this value will be selected",
         default = 60,
         min = 1,
-        max = 180,
+        max = 89,
         update = set_algorithm
     )
 
@@ -160,7 +160,7 @@ def B2Unfold_Settings(scn):
         max = 0.999,
         update = set_algorithm
     )
-B2Unfold_Settings(bpy.context.scene)
+
 # ---------------------------------------- USER INTEFACE --------------------------------------------
 
 class B2Unfold(bpy.types.Operator):
@@ -192,7 +192,7 @@ class UnfoldUVMain(bpy.types.Panel):
 
     def draw(self, context):
         layout = self.layout
-        scn = context.scene
+        scn = bpy.context.scene
 
         # ---------- SEND BUTTON ------------
         sendButton = layout.row()
@@ -235,6 +235,7 @@ class UnfoldUVMain(bpy.types.Panel):
 
 def register():
     bpy.utils.register_module(__name__)
+    B2Unfold_Settings()
 
 def unregister():
     bpy.utils.unregister_module(__name__)
