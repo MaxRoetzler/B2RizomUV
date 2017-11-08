@@ -1,14 +1,15 @@
 bl_info = {
-	"name": "B2Unfold3D",
-	"author": "Art Team at Fantastic, Yes",
-	"version": (0, 75),
-	"blender": (2, 78, 0),
-	"location": "UV > B2Unfold3D - UV Unwrapper ",
-	"description": "Blender to Unfold3D bridge for Uv Unwrapping",
-	"warning": "",
-	"wiki_url": "",
-	"tracker_url": "",
-	"category": "UV"
+    "name": "B2Unfold3D",
+    "author": "Erik Sutton / Technical Artist",
+    "company": "Fantastic, Yes",
+    "version": (0, 8),
+    "blender": (2, 78, 0),
+    "location": "UV > B2Unfold3D - UV Unwrapper ",
+    "description": "Blender to Unfold3D bridge for Uv Unwrapping",
+    "warning": "",
+    "wiki_url": "",
+    "tracker_url": "",
+    "category": "UV"
 }
 
 import subprocess
@@ -22,27 +23,31 @@ from sys import platform
 # from . import addon_updater_ops //Looking into getting this added to the plugin
 
 def B2Unfold_LinkFunction():
-	path = "" + tempfile.gettempdir()
-	path = '/'.join(path.split('\\'))
-	objName = "Tmp.obj"
-	originalObj = bpy.data.objects.get(bpy.context.active_object.name)
+    path = "" + tempfile.gettempdir()
+    path = '/'.join(path.split('\\'))
+    objName = "Tmp.obj"
+    originalObj = bpy.data.objects.get(bpy.context.active_object.name)
 
-	# ---------------------------------------- Setup Scene Object ---------------------------------------
-	if not bpy.context.object.data.uv_layers:
-		bpy.ops.mesh.uv_texture_add()
+    # ---------------------------------------- Setup Scene Object ---------------------------------------
+    if not bpy.context.object.data.uv_layers:
+        bpy.ops.mesh.uv_texture_add()
 
-	# ---------------------------------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------------------------------
 
-	bpy.ops.export_scene.obj(filepath=path + objName, check_existing=True, axis_forward='-Z', axis_up='Y', filter_glob="*.obj;*.mtl",
-	                         use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True, use_smooth_groups=False,
-	                         use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False, use_triangles=False,
-	                         use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False, group_by_material=False,
-	                         keep_vertex_order=False, global_scale=1, path_mode='AUTO')
+    bpy.ops.export_scene.obj(filepath=path + objName, check_existing=True, axis_forward='-Z', axis_up='Y',
+                             filter_glob="*.obj;*.mtl",
+                             use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True,
+                             use_smooth_groups=False,
+                             use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False,
+                             use_triangles=False,
+                             use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
+                             group_by_material=False,
+                             keep_vertex_order=False, global_scale=1, path_mode='AUTO')
 
-	cmdModel_string = "U3dLoad({File={Path='" + path + objName + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})\n"
-	print(cmdModel_string)
+    cmdModel_string = "U3dLoad({File={Path='" + path + objName + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})\n"
+    print(cmdModel_string)
 
-	cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
+    cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
 	" + algorithmString + "\
 	U3dCut({PrimType='Edge'})\n\
 	U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true, BorderIntersections=true, TriangleFlips=true})\n\
@@ -54,261 +59,315 @@ def B2Unfold_LinkFunction():
 	U3dSave({File={Path='" + path + objName + "', UVWProps=true}, __UpdateUIObjFileName=true})\n\
 	U3dQuit()"
 
-	hierString = ""
-	for options in hierOPTIONS:
-		print(options)
-		hierString += options
+    hierString = ""
+    distoString = ""
 
-	f = open(path + "Unwrap.lua", "w+")
-	f.write(cmdModel_string + hierString + cmd1_string)
-	f.close()
+    if (bpy.context.scene.autoSeamAlgorithm == '0'):
+        for options in hierOPTIONS:
+            print(options)
+            hierString += options
 
-	unfold3DPath = bpy.context.user_preferences.addons[__name__].preferences.filepath
+    if (bpy.context.scene.distoControl == True) and (bpy.context.scene.autoSeamAlgorithm == '0') or (bpy.context.scene.autoSeamAlgorithm == '1'):
+        for disS in distoOPTIONS:
+            print(disS)
+            distoString += disS
 
-	if platform == "darwin":
-		l = os.listdir(unfold3DPath)
-		appName = (str(l).strip("[]")).strip("'")
-		subprocess.run([unfold3DPath + appName, '-cfi', path + 'Unwrap.lua'])
-	elif platform == "win32":
-		subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
+    f = open(path + "Unwrap.lua", "w+")
+    f.write(''.join([cmdModel_string, distoString, hierString, cmd1_string]))
+    f.close()
 
-	imported_object = bpy.ops.import_scene.obj(filepath=path + objName)
-	obj_object = bpy.context.selected_objects[0]
+    unfold3DPath = bpy.context.user_preferences.addons[__name__].preferences.filepath
 
-	for obj in bpy.context.selected_objects:
-		obj.select = False
+    if platform == "darwin":
+        l = os.listdir(unfold3DPath)
+        appName = (str(l).strip("[]")).strip("'")
+        subprocess.run([unfold3DPath + appName, '-cfi', path + 'Unwrap.lua'])
+    elif platform == "win32":
+        subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
 
-	obj_object.select = True
-	originalObj.select = True
-	bpy.context.scene.objects.active = obj_object
-	bpy.ops.object.join_uvs()
+    imported_object = bpy.ops.import_scene.obj(filepath=path + objName)
+    obj_object = bpy.context.selected_objects[0]
 
-	originalObj.select = False
+    for obj in bpy.context.selected_objects:
+        obj.select = False
 
-	bpy.ops.object.delete()
-	os.remove(path + "Unwrap.lua")
-	hierString = ""
-	hierOPTIONS[:] = []
+    obj_object.select = True
+    originalObj.select = True
+    bpy.context.scene.objects.active = obj_object
+    bpy.ops.object.join_uvs()
+
+    originalObj.select = False
+    bpy.ops.object.delete()
+
+    #----------------- Clearing strings for further use after reimport ----------------------
+    hierString = ""
+    hierOPTIONS[:] = []
+    distoString = ""
+    distoOPTIONS[:] = []
+
+    #----------------------------------------------------------------------------------------
+
 
 algorithmCMDStrings = "U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={SharpEdges={AngleMin=60, PipesCutter=true, HandleCutter=true}})"
 algorithmString = ""
 
+hierOPTIONS = []
+distoOPTIONS = []
 
 # ---------------------------------------- HELPER FUNCTIONS -----------------------------------------
 
 def set_algorithm(self, context):
-	global algorithmCMDStrings, algorithmString, hierString
+    global algorithmCMDStrings, algorithmString, hierString
 
-	algorithmCMDStrings = \
-		[
-			"U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={Skeleton={}, Open=true, PipesCutter=true, HandleCutter=true}})",
-			"U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={QuasiDevelopable={Developability=" + str(bpy.context.scene.mosaicForce) + ", IslandPolyNBMin=5, FitCones=false, Straighten=true}, PipesCutter=true, HandleCutter=true}})",
-			"U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={SharpEdges={AngleMin=" + str(bpy.context.scene.sharpestAngle) + "}, PipesCutter=true, HandleCutter=true}})"]
+    algorithmCMDStrings = \
+        [
+            "U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={Skeleton={}, Open=true, PipesCutter=true, HandleCutter=true}})",
+            "U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={QuasiDevelopable={Developability=" + str(bpy.context.scene.mosaicForce) + ", IslandPolyNBMin=5, FitCones=false, Straighten=true}, PipesCutter=true, HandleCutter=true}})",
+            "U3dSelect({PrimType='Edge', Select=true, ResetBefore=true, WorkingSetPrimType='Island', ProtectMapName='Protect', FilterIslandVisible=true, Auto={SharpEdges={AngleMin=" + str(bpy.context.scene.sharpestAngle) + "}, PipesCutter=true, HandleCutter=true}})"]
 
-	algorithmString = algorithmCMDStrings[(int(self.autoSeamAlgorithm))]
+    algorithmString = algorithmCMDStrings[(int(self.autoSeamAlgorithm))]
 
 
 def set_mosaicForce(value):
-	bpy.context.scene.mosaicForce = value
+    bpy.context.scene.mosaicForce = value
 
+#---------------------- Hierarchical Pelt Options -------------------------
 
 def set_hierarchicalOps():
-	global hierOPTIONS
+    global hierOPTIONS
 
-	if (bpy.context.scene.leaf == True):
-		hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Leafs', Value=true})\n")
-	if (bpy.context.scene.branches == True):
-		hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Branches', Value=true})\n")
-	if (bpy.context.scene.trunk == True):
-		hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Trunk', Value=true})\n")
+    if bpy.context.scene.leaf == True:
+        hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Leafs', Value=true})\n")
+    if bpy.context.scene.branches == True:
+        hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Branches', Value=true})\n")
+    if bpy.context.scene.trunk == True:
+        hierOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Hierarchical.Trunk', Value=true})\n")
+    print(hierOPTIONS)
 
-	print(hierOPTIONS)
+#----------------------------- Disto Options ------------------------------
+
+def set_distoControlOps():
+    global distoOPTIONS
+
+    if bpy.context.scene.distoControl == True:
+        distoOPTIONS.append("U3dSet({Path='Vars.AutoSelect.Bijectiver', Value=true})\nU3dSet({Path='Vars.AutoSelect.BijectiverMinQ', Value=" + str(bpy.context.scene.distoControlForce) + "})\n")
 
 
 # ------------------------------------------- SETTINGS -----------------------------------------------
 
 def B2Unfold_Settings():
-	bpy.types.Scene.optimize = IntProperty \
-			(
-			name="Interations",
-			description="Optimize UV Coordinate for less distortion (Number of iterations for the optimize algorithm)",
-			default=1,
-			min=1,
-			max=750,
-		)
-	bpy.types.Scene.autoSeamAlgorithm = EnumProperty \
-			(
-			name="Algorithm",
-			description="This Auto Seams dropdown contains advanced algorithms to select edges automatically of the visible island set. These edges serve as a good candidate to cut and segment the islands",
-			# (identifier, name, description, icon, number)
-			items=[('0', "Hierarchical Pelt Algorithm", ''),
-			       ('1', "Mosaic Algorithm", ''),
-			       ('2', "Sharpest Angles Algorithm", ''),
-			       ],
-			default='2',
-			update=set_algorithm
-		)
+    bpy.types.Scene.optimize = IntProperty \
+            (
+            name="Interations",
+            description="Optimize UV Coordinate for less distortion (Number of iterations for the optimize algorithm)",
+            default=1,
+            min=1,
+            max=750,
+        )
+    bpy.types.Scene.autoSeamAlgorithm = EnumProperty \
+            (
+            name="Algorithm",
+            description="This Auto Seams dropdown contains advanced algorithms to select edges automatically of the visible island set. These edges serve as a good candidate to cut and segment the islands",
+            # (identifier, name, description, icon, number)
+            items=[('0', "Hierarchical Pelt Algorithm", ''),
+                   ('1', "Mosaic Algorithm", ''),
+                   ('2', "Sharpest Angles Algorithm", ''),
+                   ],
+            default='2',
+            update=set_algorithm
+        )
 
-	bpy.types.Scene.sharpestAngle = IntProperty \
-			(
-			name="Sharpest Angle",
-			description="Edges that have their polygon's normals forming an angle superior to this value will be selected",
-			default=60,
-			min=1,
-			max=180,
-			update=set_algorithm
-		)
+    bpy.types.Scene.sharpestAngle = IntProperty \
+            (
+            name="Sharpest Angle",
+            description="Edges that have their polygon's normals forming an angle superior to this value will be selected",
+            default=60,
+            min=1,
+            max=180,
+            update=set_algorithm
+        )
 
-	bpy.types.Scene.mosaicForce = FloatProperty \
-			(
-			name="Mosaic Force",
-			description="High values will segment more so the islands will be unfolded with less distortion. Low values will segment less but the cut will generate more distortion",
-			default=0.5,
-			min=0.001,
-			max=0.999,
-			update=set_algorithm
-		)
+    bpy.types.Scene.mosaicForce = FloatProperty \
+            (
+            name="Mosaic Force",
+            description="High values will segment more so the islands will be unfolded with less distortion. Low values will segment less but the cut will generate more distortion",
+            default=0.5,
+            min=0.001,
+            max=0.999,
+            update=set_algorithm
+        )
 
-	bpy.types.Scene.leaf = BoolProperty \
-			(
-			name="Leafs",
-			description="Hierarchical",
-			update=set_algorithm
-		)
+    bpy.types.Scene.leaf = BoolProperty \
+            (
+            name="Leafs",
+            description="Hierarchical segmentation will select the leaf's sections",
+            default=False,
+            update=set_algorithm
+        )
 
-	bpy.types.Scene.branches = BoolProperty \
-			(
-			name="Branches",
-			description="Hierarchical",
-			update=set_algorithm
-		)
+    bpy.types.Scene.branches = BoolProperty \
+            (
+            name="Branches",
+            description="Hierarchical segmentation will select the branch sections",
+            update=set_algorithm
+        )
 
-	bpy.types.Scene.trunk = BoolProperty \
-			(
-			name="Trunk",
-			description="Hierarchical",
-			update=set_algorithm
-		)
+    bpy.types.Scene.trunk = BoolProperty \
+            (
+            name="Trunk",
+            description="Hierarchical segmentation will select the trunk's sections",
+            default=False,
+            update=set_algorithm
+        )
 
+    bpy.types.Scene.distoControl = BoolProperty\
+            (
+            name="Disto Control",
+            description="Hierarchical and Mosaic only! Add enough cuts to ensure no flips and no overlaps once the mesh will be unfolded as a post process of Hierarchical and Mosaic",
+            default=False,
+            update=set_algorithm
+        )
 
-hierOPTIONS = []
+    bpy.types.Scene.distoControlForce = FloatProperty \
+            (
+            name="Disto Control Force",
+            description="High values give less distortion but select more edges (more islands count after cut)",
+            default=0.5,
+            min=0,
+            max=0.99,
+            update=set_algorithm
+        )
 
 
 # ---------------------------------------- USER INTEFACE --------------------------------------------
 
 class B2Unfold(bpy.types.Operator):
-	"""B2Unfold3D Link"""
-	bl_idname = "b2unfold.link"
-	bl_label = "Link"
+    """B2Unfold3D Link"""
+    bl_idname = "b2unfold.link"
+    bl_label = "Link"
 
-	def execute(self, context):
-		set_hierarchicalOps()
-		B2Unfold_LinkFunction()
-		return {'FINISHED'}
+    def execute(self, context):
+        set_hierarchicalOps()
+        set_distoControlOps()
+        B2Unfold_LinkFunction()
+        return {'FINISHED'}
 
 
 class MosaicButton(bpy.types.Operator):
-	bl_idname = "mosaic.value"
-	bl_label = "force"
-	mosaicValue = bpy.props.FloatProperty()
+    bl_idname = "mosaic.value"
+    bl_label = "force"
+    mosaicValue = bpy.props.FloatProperty()
 
-	def execute(self, context):
-		set_mosaicForce(self.mosaicValue)
-		return {'FINISHED'}
+    def execute(self, context):
+        set_mosaicForce(self.mosaicValue)
+        return {'FINISHED'}
 
 
 class UnfoldUVMain(bpy.types.Panel):
-	"""Creates Main Panel in the Object properties window"""
-	bl_label = "Unfold3D Main"
-	bl_context = "objectmode"
-	bl_idname = "Unfold_Panel"
-	bl_space_type = 'VIEW_3D'
-	bl_region_type = 'TOOLS'
-	bl_category = "UnfoldUV"
+    """Creates Main Panel in the Object properties window"""
+    bl_label = "Unfold3D Main"
+    bl_context = "objectmode"
+    bl_idname = "Unfold_Panel"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'TOOLS'
+    bl_category = "UnfoldUV"
 
-	def draw(self, context):
-		layout = self.layout
-		scn = bpy.context.scene
+    def draw(self, context):
+        layout = self.layout
+        scn = bpy.context.scene
 
-		# ---------- SEND BUTTON ------------
-		sendButton = layout.row()
-		sendButton.scale_y = 2.5
-		sendButton.operator(B2Unfold.bl_idname, text="Auto Unfold", icon='TEXTURE_DATA')
+        # ---------- SEND BUTTON ------------
+        sendButton = layout.row()
+        sendButton.scale_y = 2.0
+        sendButton.operator(B2Unfold.bl_idname, text="Auto Unfold", icon='TEXTURE_DATA')
 
-		# -------- SETTINGS WINDOW ----------
-		settingsBox = layout.box()
-		settingsBox.label("Unfold3D Settings")
-		algorithmOps = settingsBox.column(True)
-		algorithmOps.prop(scn, "autoSeamAlgorithm", icon="EDGESEL")
+        # -------- SETTINGS WINDOW ----------
+        settingsBox = layout.box()
+        settingsBox.label("Unfold3D Settings")
+        algorithmOps = settingsBox.column(True)
+        algorithmOps.prop(scn, "autoSeamAlgorithm", icon="EDGESEL")
 
-		if (scn.autoSeamAlgorithm == '0'):
-			algorithmBox = settingsBox.box()
-			hierarchicalOps = algorithmBox.row(align=True)
-			hierarchicalOps.prop(scn, "leaf", toggle=True)
-			hierarchicalOps.prop(scn, "branches", toggle=True)
-			hierarchicalOps.prop(scn, "trunk", toggle=True)
+        if (scn.autoSeamAlgorithm == '0'):
+            algorithmBox = settingsBox.box()
+            hierarchicalOps = algorithmBox.row(align=True)
+            hierarchicalOps.prop(scn, "leaf", toggle=True)
+            hierarchicalOps.prop(scn, "branches", toggle=True)
+            hierarchicalOps.prop(scn, "trunk", toggle=True)
 
-		elif (scn.autoSeamAlgorithm == '1'):
-			algorithmBox = settingsBox.box()
-			forceButtons = algorithmBox.row(align=True)
-			forceButtons.operator(MosaicButton.bl_idname, text="1").mosaicValue = 0.25
-			forceButtons.operator(MosaicButton.bl_idname, text="2").mosaicValue = 0.5
-			forceButtons.operator(MosaicButton.bl_idname, text="3").mosaicValue = 0.75
-			forceButtons.operator(MosaicButton.bl_idname, text="4").mosaicValue = 0.95
-			algorithmBox.prop(scn, "mosaicForce")
+            distoOps = algorithmBox.row(align=True)
+            distoOps.prop(scn, "distoControl", toggle=True)
+            if (scn.distoControl == True):
+                distoOps.prop(scn, "distoControlForce")
 
-		elif (scn.autoSeamAlgorithm == '2'):
-			algorithmBox = settingsBox.box()
-			algorithmBox.prop(scn, "sharpestAngle")
+        elif (scn.autoSeamAlgorithm == '1'):
+            algorithmBox = settingsBox.box()
+            forceButtons = algorithmBox.row(align=True)
+            forceButtons.label("Presets")
+            forceButtons.operator(MosaicButton.bl_idname, text="1").mosaicValue = 0.25
+            forceButtons.operator(MosaicButton.bl_idname, text="2").mosaicValue = 0.5
+            forceButtons.operator(MosaicButton.bl_idname, text="3").mosaicValue = 0.75
+            forceButtons.operator(MosaicButton.bl_idname, text="4").mosaicValue = 0.95
+            algorithmBox.prop(scn, "mosaicForce")
 
-		iterations = settingsBox.box()
-		iterations.label("Optimize")
-		iterations.prop(scn, "optimize")
+            distoOps = algorithmBox.row(align=True)
+            distoOps.prop(scn, "distoControl", toggle=True)
+            if (scn.distoControl == True):
+                distoOps.prop(scn, "distoControlForce")
+
+        elif (scn.autoSeamAlgorithm == '2'):
+            algorithmBox = settingsBox.box()
+            algorithmBox.prop(scn, "sharpestAngle")
+
+        gSettingsBox = settingsBox.box()
+        gSettingsBox.label("General Settings", icon='SCRIPTWIN')
+
+        iterations = gSettingsBox.row(align=True)
+        iterations.prop(scn, "optimize")
 
 
 class UnfoldAddonPreferences(AddonPreferences):
-	bl_idname = __name__
+    bl_idname = __name__
 
-	filepath = StringProperty \
-			(
-			name="Unfold3D Executable Path",
-			subtype='FILE_PATH',
-		)
+    filepath = StringProperty \
+            (
+            name="Unfold3D Executable Path",
+            subtype='FILE_PATH',
+        )
 
-	def draw(self, context):
-		layout = self.layout
-		layout.label(text="Set the path to the Unfold3D Application")
-		layout.prop(self, "filepath")
+    def draw(self, context):
+        layout = self.layout
+        layout.label(text="Set the path to the Unfold3D Application")
+        layout.prop(self, "filepath")
 
-	# addon_updater_ops.update_settings_ui(self, context)
+        # addon_updater_ops.update_settings_ui(self, context)
 
 
 class OBJECT_OT_addon_prefs(Operator):
-	bl_idname = "object.addon_prefs"
-	bl_label = "Addon Preferences"
-	bl_options = {'REGISTER', 'UNDO'}
+    bl_idname = "object.addon_prefs"
+    bl_label = "Addon Preferences"
+    bl_options = {'REGISTER', 'UNDO'}
 
-	def execute(self, context):
-		user_preferences = context.user_preferences
-		addon_prefs = user_preferences.addons[__name__].preferences
+    def execute(self, context):
+        user_preferences = context.user_preferences
+        addon_prefs = user_preferences.addons[__name__].preferences
 
-		info = ("Path: %s" % (addon_prefs.filepath))
+        info = ("Path: %s" % (addon_prefs.filepath))
 
-		self.report({'INFO'}, info)
-		print(info)
+        self.report({'INFO'}, info)
+        print(info)
 
-		return {'FINISHED'}
+        return {'FINISHED'}
 
 
 def register():
-	# addon_updater_ops.register(bl_info)
-	bpy.utils.register_module(__name__)
-	B2Unfold_Settings()
+    # addon_updater_ops.register(bl_info)
+    bpy.utils.register_module(__name__)
+    B2Unfold_Settings()
 
 
 def unregister():
-	bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_module(__name__)
 
 
 if __name__ == "__main__":
-	register()
+    register()
