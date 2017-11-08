@@ -19,7 +19,6 @@ from bpy.types import Operator, AddonPreferences
 import tempfile
 from sys import platform
 
-
 # from . import addon_updater_ops //Looking into getting this added to the plugin
 
 def B2Unfold_LinkFunction():
