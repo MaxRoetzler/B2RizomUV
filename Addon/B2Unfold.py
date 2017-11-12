@@ -57,9 +57,12 @@ def B2Unfold_LinkFunction():
                              group_by_material=False,
                              keep_vertex_order=False, global_scale=1, path_mode='AUTO')
 
-    cmdModel_string = "U3dLoad({File={Path='" + path + objName + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})\n"
+    objfile_string = "U3dLoad({File={Path='" + path + objName + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})\n"
 
-    cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
+    textureSettings_string = "U3dSet({Path='Prefs.PackOptions.MapResolution', Value=" + str(bpy.context.scene.mapSize) + "})\n\
+    U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={SpacingSize=" + str(bpy.context.scene.spacing) + "}}})"
+
+    main_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
 	" + algorithmString + "\
 	U3dCut({PrimType='Edge'})\n\
 	U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true})\n\
@@ -89,7 +92,7 @@ def B2Unfold_LinkFunction():
             genString += genOps
 
     f = open(path + "Unwrap.lua", "w+")
-    f.write(''.join([cmdModel_string, genString, distoString, hierString, cmd1_string]))
+    f.write(''.join([objfile_string, genString, distoString, hierString, textureSettings_string, main_string]))
     f.close()
 
     unfold3DPath = bpy.context.user_preferences.addons[__name__].preferences.filepath
@@ -217,6 +220,8 @@ def set_distoControlOps():
 # ------------------------------------------- SETTINGS -----------------------------------------------
 
 def B2Unfold_Settings():
+
+    #region General Settings Properties
     bpy.types.Scene.optimize = IntProperty \
             (
             name="Interations",
@@ -246,6 +251,26 @@ def B2Unfold_Settings():
             description="When active, Unfold and Optimize will fill the mesh's holes with invisible and temporary polygons so that they will prevent the mesh from collapsing in certain scenarios.",
             default=False
         )
+
+    bpy.types.Scene.mapSize = IntProperty \
+            (
+            name="Map Resolution",
+            description="The horizontal resolution of the texture map. It affects Margin and Spacing values if the Units are set to pixel (px)",
+            default=1024,
+            min=1,
+            max=16384
+        )
+
+    bpy.types.Scene.spacing = FloatProperty \
+            (
+            name="Island Spacing",
+            description="The space left around each island",
+            default=0.002,
+            min=0,
+            max=0.02
+        )
+
+    #endregion
 
     #region Algorithm Properties
     bpy.types.Scene.autoSeamAlgorithm = EnumProperty \
@@ -414,6 +439,10 @@ class UnfoldUVMain(bpy.types.Panel):
         prevents.prop(scn, "tFlips", toggle=True, icon="OUTLINER_DATA_MESH")
         prevents.prop(scn, "overlaps", toggle=True, icon="SNAP_FACE")
         prevents.prop(scn, "holeFill", toggle=True, icon="OUTLINER_DATA_LATTICE")
+
+        textureSettings = gSettingsBox.column(True)
+        textureSettings.prop(scn, "mapSize")
+        textureSettings.prop(scn, "spacing", slider=True)
 
 
 class UnfoldAddonPreferences(AddonPreferences):
