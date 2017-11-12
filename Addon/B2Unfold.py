@@ -1,7 +1,7 @@
 bl_info = {
     "name": "B2Unfold3D",
     "author": "Erik Sutton / Technical Artist",
-    "version": (0, 8),
+    "version": (0, 9),
     "blender": (2, 78, 0),
     "location": "UV > B2Unfold3D - UV Unwrapper ",
     "description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -29,9 +29,8 @@ def B2Unfold_LinkFunction():
     objName = "Tmp.obj"
     originalObj = bpy.data.objects.get(bpy.context.active_object.name)
 
-    # ---------------------------------------- Setup Scene Object ---------------------------------------
-    if not bpy.context.object.data.uv_layers:
-        bpy.ops.mesh.uv_texture_add()
+    # ---------------------------------------- Setup Scene Objects ---------------------------------------
+    meshCheck()
 
     # ---------------------------------------------------------------------------------------------------
 
@@ -47,7 +46,7 @@ def B2Unfold_LinkFunction():
         objs.name = str(nmList[outList.index(objs)][1])
 
     # ---------------------------------------- Exporting ---------------------------------------
-
+    # region Exporting
     bpy.ops.export_scene.obj(filepath=path + objName, check_existing=True, axis_forward='-Z', axis_up='Y',
                              filter_glob="*.obj;*.mtl",
                              use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True,
@@ -63,7 +62,7 @@ def B2Unfold_LinkFunction():
     cmd1_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
 	" + algorithmString + "\
 	U3dCut({PrimType='Edge'})\n\
-	U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true, BorderIntersections=true, TriangleFlips=true})\n\
+	U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true})\n\
 	U3dIslandGroups({Mode='DistributeInTilesEvenly', MergingPolicy=8322, GroupPath='RootGroup'})\n\
 	U3dPack({ProcessTileSelection=false, RecursionDepth=1, RootGroup='RootGroup', Scaling={}, Rotate={}, Translate=true, LayoutScalingMode=2})\n\
 	U3dIslandGroups({Mode='DistributeInTilesByBBox', MergingPolicy=8322})\n\
@@ -74,6 +73,7 @@ def B2Unfold_LinkFunction():
 
     hierString = ""
     distoString = ""
+    genString = ""
 
     if (bpy.context.scene.autoSeamAlgorithm == '0'):
         for options in hierOPTIONS:
@@ -84,8 +84,12 @@ def B2Unfold_LinkFunction():
         for disS in distoOPTIONS:
             distoString += disS
 
+    if(bpy.context.scene.tFlips == True) or (bpy.context.scene.overlaps == True) or (bpy.context.scene.holeFill == True):
+        for genOps in genOPTIONS:
+            genString += genOps
+
     f = open(path + "Unwrap.lua", "w+")
-    f.write(''.join([cmdModel_string, distoString, hierString, cmd1_string]))
+    f.write(''.join([cmdModel_string, genString, distoString, hierString, cmd1_string]))
     f.close()
 
     unfold3DPath = bpy.context.user_preferences.addons[__name__].preferences.filepath
@@ -96,9 +100,9 @@ def B2Unfold_LinkFunction():
         subprocess.run([unfold3DPath + appName, '-cfi', path + 'Unwrap.lua'])
     elif platform == "win32":
         subprocess.run([unfold3DPath + 'unfold3d.exe', '-cfi', path + 'Unwrap.lua'])
-
+    # endregion
     # ---------------------------------------- Importing ---------------------------------------
-
+    # region Importing
     imported_object = bpy.ops.import_scene.obj(filepath=path + objName)
     obj_object = bpy.context.selected_objects[0]
 
@@ -126,12 +130,14 @@ def B2Unfold_LinkFunction():
 
         for oriObj in bpy.context.selected_objects:
             oriObj.select = False
-
+    # endregion
     # ----------------- Clearing strings for further use after reimport ----------------------
     hierString = ""
     hierOPTIONS[:] = []
     distoString = ""
     distoOPTIONS[:] = []
+    genString = ""
+    genOPTIONS[:] = []
 
 
 # ----------------------------------------------------------------------------------------
@@ -142,9 +148,28 @@ algorithmString = ""
 
 hierOPTIONS = []
 distoOPTIONS = []
+genOPTIONS = []
 
 
 # ---------------------------------------- HELPER FUNCTIONS -----------------------------------------
+
+def meshCheck ():
+    if not bpy.context.object.data.uv_layers:
+        bpy.ops.mesh.uv_texture_add()
+
+    #Add more mesh check here if proven important for reimporting failures
+
+def set_settings():
+    global genOPTIONS
+
+    if bpy.context.scene.tFlips == True:
+        genOPTIONS.append("U3dSet({Path='Prefs.TriangleFlipsOn', Value=true})\n")
+    if bpy.context.scene.overlaps == True:
+        genOPTIONS.append("U3dSet({Path='Prefs.BorderIntersectionsOn', Value=true})\n")
+    if bpy.context.scene.holeFill == True:
+        genOPTIONS.append("U3dSet({Path='Vars.Unwrap.FillHoles', Value=true})\n")
+
+    print(genOPTIONS)
 
 def set_algorithm(self, context):
     global algorithmCMDStrings, algorithmString, hierString
@@ -200,6 +225,29 @@ def B2Unfold_Settings():
             min=1,
             max=750,
         )
+
+    bpy.types.Scene.tFlips = BoolProperty \
+            (
+            name="T Flips",
+            description="When active, Unfold and Optimize will prevent creation of triangle flips, WARNING: Can increase greatly the computation time.",
+            default=False
+        )
+
+    bpy.types.Scene.overlaps = BoolProperty \
+            (
+            name="Overlaps",
+            description="When active, Unfold and Optimize will prevent creation of self border intersections, WARNING: Can increase greatly the computation time.",
+            default=False
+        )
+
+    bpy.types.Scene.holeFill = BoolProperty \
+            (
+            name="Fill Holes",
+            description="When active, Unfold and Optimize will fill the mesh's holes with invisible and temporary polygons so that they will prevent the mesh from collapsing in certain scenarios.",
+            default=False
+        )
+
+    #region Algorithm Properties
     bpy.types.Scene.autoSeamAlgorithm = EnumProperty \
             (
             name="Algorithm",
@@ -273,6 +321,7 @@ def B2Unfold_Settings():
             max=0.99,
             update=set_algorithm
         )
+    #endregion
 
 
 # ---------------------------------------- USER INTEFACE --------------------------------------------
@@ -285,6 +334,7 @@ class B2Unfold(bpy.types.Operator):
     def execute(self, context):
         set_hierarchicalOps()
         set_distoControlOps()
+        set_settings()
         B2Unfold_LinkFunction()
         return {'FINISHED'}
 
@@ -360,6 +410,11 @@ class UnfoldUVMain(bpy.types.Panel):
         iterations = gSettingsBox.row(align=True)
         iterations.prop(scn, "optimize")
 
+        prevents = gSettingsBox.column(True)
+        prevents.prop(scn, "tFlips", toggle=True, icon="OUTLINER_DATA_MESH")
+        prevents.prop(scn, "overlaps", toggle=True, icon="SNAP_FACE")
+        prevents.prop(scn, "holeFill", toggle=True, icon="OUTLINER_DATA_LATTICE")
+
 
 class UnfoldAddonPreferences(AddonPreferences):
     bl_idname = __name__
@@ -367,7 +422,7 @@ class UnfoldAddonPreferences(AddonPreferences):
     filepath = StringProperty \
             (
             name="Unfold3D Executable Path",
-            subtype='FILE_PATH',
+            subtype='DIR_PATH',
         )
 
     def draw(self, context):
