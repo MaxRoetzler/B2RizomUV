@@ -136,6 +136,8 @@ def B2Unfold_ImportFunction(Path, Object, Names, ImportList):
 	for inObj in bpy.context.selected_objects:
 		ImportList.append(inObj)
 	ImportList.sort(key=lambda obj: obj.name)
+	print(Names)
+	print(ImportList)
 	for obj in bpy.context.selected_objects:
 		obj.select = False
 
@@ -143,7 +145,7 @@ def B2Unfold_ImportFunction(Path, Object, Names, ImportList):
 
 		# --------- Transfer UVs ----------
 		imObjs.select = True
-		tmpString = "" + str(Names[ImportList.index(imObjs)][1])
+		tmpString = "" + '{:04d}'.format(Names[ImportList.index(imObjs)][1])
 		bpy.data.objects[tmpString].select = True
 		bpy.context.scene.objects.active = imObjs
 		bpy.ops.object.join_uvs()
@@ -184,7 +186,7 @@ manList = []
 
 def B2Unfold_Utilites():
 
-	path = "" + tempfile.gettempdir()
+	path = tempfile.gettempdir() + "/"
 	path = '/'.join(path.split('\\'))
 	obj = "Tmp.obj"
 	# originalObj = bpy.data.objects.get(bpy.context.active_object.name)
@@ -198,12 +200,14 @@ def B2Unfold_Utilites():
 
 	for objs in outList:
 		nmList.append([objs.name, outList.index(objs)])
-		objs.name = str(nmList[outList.index(objs)][1])
+		objs.name = '{:04d}'.format(nmList[outList.index(objs)][1])
 
 	manList.append(path)
 	manList.append(obj)
 	manList.append(nmList)
 	manList.append(inList)
+
+	print(path)
 
 	return (path, obj, nmList, inList)
 
