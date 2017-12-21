@@ -194,7 +194,7 @@ def B2Unfold_Utilites():
 
 	path = tempfile.gettempdir() + "/"
 	path = '/'.join(path.split('\\'))
-	obj = "Tmp.obj"
+	obj = "Tmp_out.obj"
 	# originalObj = bpy.data.objects.get(bpy.context.active_object.name)
 
 	outList = []
