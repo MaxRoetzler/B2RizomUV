@@ -45,7 +45,7 @@ def B2Unfold_AutoFunction():
 		bpy.context.scene.spacing) + "}}})\n\
 	U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={MarginSize=" + str(bpy.context.scene.margin) + "}}})"
 
-	main_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=2000}}})\n\
+	main_string = "U3dIslandGroups({Mode='SetGroupsProperties', MergingPolicy=8322, GroupPaths={ 'RootGroup' }, Properties={Pack={Resolution=" + str(bpy.context.scene.packQuality) + "}}})\n\
 	" + algorithmString + "\
 	U3dCut({PrimType='Edge'})\n\
 	U3dUnfold({PrimType='Edge', MinAngle=1e-005, Mix=1, Iterations=" + str(bpy.context.scene.optimize) + ", PreIterations=5, StopIfOutOFDomain=false, RoomSpace=0, PinMapName='Pin', ProcessNonFlats=true, ProcessSelection=true, ProcessAllIfNoneSelected=true, ProcessJustCut=true})\n\
@@ -154,11 +154,17 @@ def B2Unfold_ImportFunction(Path, Object, Names, ImportList):
 		bpy.context.scene.objects.active = bpy.data.objects[tmpString]
 		tmpObj = bpy.context.active_object
 		tmpObj.name = str(Names[ImportList.index(imObjs)][0])
+
+		bpy.ops.object.mode_set(mode='EDIT')
+		bpy.ops.uv.seams_from_islands(mark_seams=True, mark_sharp=False)
+		bpy.ops.object.mode_set(mode='OBJECT')
+
 		bpy.data.objects[tmpObj.name].select = False
 		bpy.ops.object.delete()
 
 		for oriObj in bpy.context.selected_objects:
 			oriObj.select = False
+
 	# endregion
 	# ----------------- Clearing strings for further use after reimport ----------------------
 	hierString = ""
@@ -281,6 +287,15 @@ def set_distoControlOps():
 def B2Unfold_Settings():
 
 	# region General Settings Properties
+	bpy.types.Scene.packQuality = IntProperty \
+			(
+			name="Packing Quality",
+			description="The quality of the packing algorithm. Smaller values are faster to compute but are less precise, whereas larger values are more precise but take longer to compute",
+			default=200,
+			min=10,
+			max=2000
+		)
+
 	bpy.types.Scene.optimize = IntProperty \
 			(
 			name="Interations",
@@ -558,6 +573,7 @@ class UnfoldUVMain(bpy.types.Panel):
 			prevents.prop(scn, "holeFill", toggle=True, icon="OUTLINER_DATA_LATTICE")
 
 			textureSettings = gSettingsBox.column(True)
+			textureSettings.prop(scn, "packQuality")
 			textureSettings.prop(scn, "mapSize")
 			textureSettings.prop(scn, "spacing", slider=True)
 			textureSettings.prop(scn, "margin", slider=True)
