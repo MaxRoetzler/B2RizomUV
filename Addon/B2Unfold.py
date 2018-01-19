@@ -102,7 +102,7 @@ def B2Unfold_ManuelExport():
 	                         use_triangles=False,
 	                         use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
 	                         group_by_material=False,
-	                         keep_vertex_order=False, global_scale=1, path_mode='AUTO')
+	                         keep_vertex_order=True, global_scale=1, path_mode='AUTO')
 
 	objfile_string = "U3dLoad({File={Path='" + path + obj + "', ImportGroups=true, XYZUVW=true, UVWProps=true}})\n"
 
