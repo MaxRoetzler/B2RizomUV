@@ -1,7 +1,7 @@
 bl_info = {
 	"name": "B2Unfold3D",
 	"author": "Erik Sutton / Technical Artist",
-	"version": (1, 0),
+	"version": (1, 2, 5),
 	"blender": (2, 78, 0),
 	"location": "UV > B2Unfold3D - UV Unwrapper ",
 	"description": "Blender to Unfold3D bridge for Uv Unwrapping",
@@ -30,13 +30,13 @@ def B2Unfold_AutoFunction():
 
 	bpy.ops.export_scene.obj(filepath=path + obj, check_existing=True, axis_forward='-Z', axis_up='Y',
 	                         filter_glob="*.obj;*.mtl",
-	                         use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True,
+	                         use_selection=True, use_animation=False, use_mesh_modifiers=bpy.context.scene.modifierApply, use_edges=True,
 	                         use_smooth_groups=False,
 	                         use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False,
 	                         use_triangles=False,
 	                         use_nurbs=False, use_vertex_groups=False, use_blen_objects=True, group_by_object=False,
 	                         group_by_material=False,
-	                         keep_vertex_order=False, global_scale=1, path_mode='AUTO')
+	                         keep_vertex_order=True, global_scale=1, path_mode='AUTO')
 
 	objfile_string = "U3dLoad({File={Path='" + path + obj + "', ImportGroups=true, XYZ=true}, NormalizeUVW=true})\n"
 
@@ -96,7 +96,7 @@ def B2Unfold_ManuelExport():
 
 	bpy.ops.export_scene.obj(filepath=path + obj, check_existing=True, axis_forward='-Z', axis_up='Y',
 	                         filter_glob="*.obj;*.mtl",
-	                         use_selection=True, use_animation=False, use_mesh_modifiers=True, use_edges=True,
+	                         use_selection=True, use_animation=False, use_mesh_modifiers=bpy.context.scene.modifierApply, use_edges=True,
 	                         use_smooth_groups=False,
 	                         use_smooth_groups_bitflags=False, use_normals=True, use_uvs=True, use_materials=False,
 	                         use_triangles=False,
@@ -347,13 +347,20 @@ def B2Unfold_Settings():
 		)
 
 	bpy.types.Scene.margin = FloatProperty \
-		(
+			(
 			name="Margin",
 			description="The space on the left/right/top/bottom of the UV tile",
 			subtype="FACTOR",
 			default=0.005,
 			min=0,
 			max=0.02
+		)
+
+	bpy.types.Scene.modifierApply = BoolProperty \
+			(
+			name="Modifier Apply",
+			description="Applies all modifiers during the bridging process",
+			default=False
 		)
 
 	# endregion
@@ -518,6 +525,10 @@ class UnfoldUVMain(bpy.types.Panel):
 			ManualButtonExport.scale_y = 1.5
 			ManualButtonExport.operator(B2UnfoldManuelImport.bl_idname, text="Get", icon="IMPORT")
 
+			settingsBox = layout.box()
+			ModifierButton = settingsBox.row(align=True)
+			ModifierButton.prop(scn, "modifierApply", toggle=True)
+
 		if(scn.autoTab == True):
 			# ---------- AUTO BUTTON ------------
 			Autobutton = layout.row()
@@ -577,6 +588,9 @@ class UnfoldUVMain(bpy.types.Panel):
 			textureSettings.prop(scn, "mapSize")
 			textureSettings.prop(scn, "spacing", slider=True)
 			textureSettings.prop(scn, "margin", slider=True)
+
+			ModifierButton = settingsBox.row(align=True)
+			ModifierButton.prop(scn, "modifierApply", toggle=True)
 
 
 class UnfoldAddonPreferences(AddonPreferences):
